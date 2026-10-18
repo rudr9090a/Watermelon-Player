@@ -1,0 +1,238 @@
+.shell {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+/* Aside ---------------------------------------------------------------- */
+.aside {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(32px, 4vw, 56px);
+  border-right: 1px solid var(--border);
+  background: linear-gradient(165deg, #18212b, #0b0e14 62%);
+}
+
+.asideGlow {
+  position: absolute;
+  top: -180px;
+  right: -120px;
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(closest-side, var(--accent-glow), transparent 72%);
+  pointer-events: none;
+}
+
+.asideInner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  max-width: 420px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  align-self: flex-start;
+}
+
+.brandMark {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--accent-bright);
+  border: 1px solid var(--accent);
+}
+
+.brandLogo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.brandWord {
+  font-size: 1.13rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.brandDot {
+  color: var(--accent-bright);
+}
+
+.asideCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.asideTitle {
+  font-size: clamp(1.9rem, 3vw, 2.6rem);
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+
+.asideText {
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.asideList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.asideItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  color: var(--text-muted);
+  font-size: 0.94rem;
+}
+
+.asideTick {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+}
+
+.asideTick::after {
+  content: "";
+  position: absolute;
+  left: 5.5px;
+  top: 4px;
+  width: 4px;
+  height: 7px;
+  border: solid var(--accent-bright);
+  border-width: 0 1.6px 1.6px 0;
+  transform: rotate(42deg);
+}
+
+.covers {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  padding-top: 32px;
+}
+
+.coverTile {
+  width: 84px;
+  height: 84px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-md);
+}
+
+.coverA {
+  background: linear-gradient(145deg, #e03f4f, #f8c463);
+}
+
+.coverB {
+  background: linear-gradient(145deg, #81912f, #f8c463);
+  transform: translateY(-14px);
+}
+
+.coverC {
+  background: linear-gradient(145deg, #f8c463, #e03f4f);
+}
+
+/* Main ----------------------------------------------------------------- */
+.main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(28px, 5vw, 56px) clamp(20px, 5vw, 56px);
+}
+
+.mainInner {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: color var(--transition);
+}
+
+.back:hover {
+  color: var(--text);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  padding: clamp(26px, 4vw, 34px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(42, 50, 61, 0.5), rgba(17, 24, 33, 0.72));
+  box-shadow: var(--shadow-md);
+}
+
+.cardHead {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  font-size: clamp(1.5rem, 3vw, 1.85rem);
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
+
+.footer {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.textLink {
+  color: var(--accent-bright);
+  font-weight: 600;
+  transition: color var(--transition);
+}
+
+.textLink:hover {
+  color: var(--text);
+}
+
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .aside {
+    display: none;
+  }
+}

@@ -1,0 +1,50 @@
+.section {
+  padding-block: clamp(40px, 7vw, 72px);
+}
+
+.panel {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+  padding: clamp(40px, 7vw, 68px) clamp(24px, 5vw, 56px);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(180deg, rgba(201, 181, 156, 0.26), rgba(239, 233, 227, 0.72));
+  box-shadow: var(--shadow-lg);
+}
+
+.glow {
+  position: absolute;
+  top: -140px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 560px;
+  height: 320px;
+  background: radial-gradient(closest-side, var(--accent-glow), transparent 75%);
+  pointer-events: none;
+}
+
+.title {
+  position: relative;
+  font-size: clamp(1.9rem, 4vw, 2.9rem);
+}
+
+.lead {
+  position: relative;
+  max-width: 520px;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.actions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 6px;
+}

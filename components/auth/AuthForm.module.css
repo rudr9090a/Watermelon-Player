@@ -1,0 +1,58 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.formError {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 12px 14px;
+  border: 1px solid rgba(251, 113, 133, 0.32);
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.formError svg {
+  margin-top: 2px;
+}
+
+/* Success panel (signup) ---------------------------------------------- */
+.success {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: center;
+  align-items: center;
+}
+
+.successIcon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  color: var(--success);
+  background: var(--success-soft);
+  border: 1px solid rgba(52, 211, 153, 0.32);
+}
+
+.successTitle {
+  font-size: 1.3rem;
+}
+
+.successText {
+  color: var(--text-muted);
+  font-size: 0.94rem;
+  line-height: 1.65;
+  max-width: 320px;
+}
+
+.successActions {
+  width: 100%;
+  margin-top: 4px;
+}

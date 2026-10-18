@@ -1,0 +1,97 @@
+.button {
+  --btn-padding-y: 11px;
+  --btn-padding-x: 20px;
+  --btn-font-size: 0.94rem;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: var(--btn-padding-y) var(--btn-padding-x);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  font-size: var(--btn-font-size);
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  line-height: 1.1;
+  white-space: nowrap;
+  transition: transform var(--transition), background var(--transition),
+    border-color var(--transition), color var(--transition),
+    box-shadow var(--transition), opacity var(--transition);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.button:disabled {
+  opacity: 0.6;
+}
+
+/* Sizes ---------------------------------------------------------------- */
+.md {
+  --btn-padding-y: 11px;
+  --btn-padding-x: 20px;
+  --btn-font-size: 0.94rem;
+}
+
+.lg {
+  --btn-padding-y: 14px;
+  --btn-padding-x: 28px;
+  --btn-font-size: 1rem;
+}
+
+.sm {
+  --btn-padding-y: 8px;
+  --btn-padding-x: 16px;
+  --btn-font-size: 0.875rem;
+}
+
+.full {
+  width: 100%;
+}
+
+/* Variants ------------------------------------------------------------- */
+.primary {
+  background-image: linear-gradient(120deg, var(--accent-bright), var(--accent-strong));
+  color: var(--accent-contrast);
+  box-shadow: var(--shadow-accent);
+}
+
+.primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 22px 60px rgba(201, 181, 156, 0.42);
+}
+
+.secondary {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.24);
+  transform: translateY(-1px);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--surface-1);
+  color: var(--text);
+}
+
+.spinner {
+  width: 0.95em;
+  height: 0.95em;
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

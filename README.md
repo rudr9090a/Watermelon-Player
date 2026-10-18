@@ -16,6 +16,38 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Private FastAPI and ngrok
+
+Run FastAPI locally on `127.0.0.1:8000`; expose only Next.js through ngrok.
+Use separate PowerShell windows:
+
+```powershell
+# Window 1: FastAPI
+Set-Location W:\Main_Projects\Storter
+python main.py
+
+# Window 2: Next.js development server reachable by ngrok
+Set-Location W:\Main_Projects\watermelon
+npm run dev:public
+
+# Window 3: public frontend tunnel
+ngrok http 3000
+```
+
+Open the HTTPS forwarding URL printed by ngrok on the other device. Do not
+tunnel port 8000. For a stable demo, build and serve Next.js instead:
+
+```powershell
+Set-Location W:\Main_Projects\watermelon
+npm run build
+npm run start
+ngrok http 3000
+```
+
+Press `Ctrl+C` in each window to stop the process. Set
+`FASTAPI_INTERNAL_URL` only when FastAPI is listening somewhere other than
+`http://127.0.0.1:8000`; it is server-only and is never sent to the browser.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
