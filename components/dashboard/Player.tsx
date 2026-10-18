@@ -11,8 +11,8 @@ import {
   SkipForward,
   Volume,
 } from "@/components/icons";
-import { useState } from "react";
 import { Spinner } from "@/components/ui/Spinner";
+import { useEffect, useRef, useState } from "react";
 import type { AudioPlayer } from "./useAudioPlayer";
 import { formatTime, toneFor } from "./utils";
 import tones from "./tones.module.css";
@@ -61,10 +61,17 @@ function Slider({
   );
 }
 
-export function Player({ player }: { player: AudioPlayer }) {
-  const [shuffle, setShuffle] = useState(false);
-  const [repeat, setRepeat] = useState(false);
-  const [liked, setLiked] = useState(false);
+export function Player({
+  player,
+  liked,
+  onToggleLike,
+}: {
+  player: AudioPlayer;
+  liked: boolean;
+  onToggleLike: () => void;
+}) {
+  const [likeAnimation, setLikeAnimation] = useState<"pop" | "break" | null>(null);
+  const previousLiked = useRef(liked);
   const {
     audioRef,
     current,
@@ -81,9 +88,23 @@ export function Player({ player }: { player: AudioPlayer }) {
     setVolume,
     hasNext,
     hasPrev,
+    shuffle,
+    repeat,
+    toggleShuffle,
+    toggleRepeat,
   } = player;
 
   const hasTrack = current !== null;
+
+  useEffect(() => {
+    if (!hasTrack || previousLiked.current === liked) {
+      return;
+    }
+    previousLiked.current = liked;
+    setLikeAnimation(liked ? "pop" : "break");
+    const timer = window.setTimeout(() => setLikeAnimation(null), 520);
+    return () => window.clearTimeout(timer);
+  }, [liked, hasTrack]);
   const canSeek = hasTrack && duration > 0;
   const position = canSeek ? Math.min(currentTime, duration) : 0;
   const artClass = current
@@ -128,7 +149,7 @@ export function Player({ player }: { player: AudioPlayer }) {
           <button
             type="button"
             className={[styles.control, shuffle ? styles.activeControl : ""].join(" ")}
-            onClick={() => setShuffle((value) => !value)}
+            onClick={toggleShuffle}
             aria-label="Toggle shuffle"
             aria-pressed={shuffle}
           >
@@ -171,7 +192,7 @@ export function Player({ player }: { player: AudioPlayer }) {
           <button
             type="button"
             className={[styles.control, repeat ? styles.activeControl : ""].join(" ")}
-            onClick={() => setRepeat((value) => !value)}
+            onClick={toggleRepeat}
             aria-label="Toggle repeat"
             aria-pressed={repeat}
           >
@@ -202,8 +223,13 @@ export function Player({ player }: { player: AudioPlayer }) {
       <div className={styles.volume}>
         <button
           type="button"
-          className={[styles.likeButton, liked ? styles.liked : ""].join(" ")}
-          onClick={() => setLiked((value) => !value)}
+          className={[
+            styles.likeButton,
+            liked ? styles.liked : "",
+            likeAnimation === "pop" ? styles.likePop : "",
+            likeAnimation === "break" ? styles.likeBreak : "",
+          ].filter(Boolean).join(" ")}
+          onClick={onToggleLike}
           aria-label={liked ? "Unlike track" : "Like track"}
           aria-pressed={liked}
           disabled={!hasTrack}

@@ -22,6 +22,10 @@ export type AudioPlayer = {
   stop: () => void;
   hasNext: boolean;
   hasPrev: boolean;
+  shuffle: boolean;
+  repeat: boolean;
+  toggleShuffle: () => void;
+  toggleRepeat: () => void;
 };
 
 /**
@@ -39,6 +43,8 @@ export function useAudioPlayer(songs: Song[]): AudioPlayer {
   const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(0.9);
   const [error, setError] = useState<string | null>(null);
+  const [shuffle, setShuffle] = useState(false);
+  const [repeat, setRepeat] = useState(false);
 
   const playSong = useCallback((song: Song) => {
     const audio = audioRef.current;
@@ -116,16 +122,21 @@ export function useAudioPlayer(songs: Song[]): AudioPlayer {
       if (index === -1) {
         return;
       }
-      const target = songs[index + delta];
+      const target = shuffle && delta > 0
+        ? songs[Math.floor(Math.random() * songs.length)]
+        : songs[index + delta];
       if (target) {
         playSong(target);
       }
     },
-    [current, songs, playSong],
+    [current, songs, playSong, shuffle],
   );
 
   const next = useCallback(() => advance(1), [advance]);
   const prev = useCallback(() => advance(-1), [advance]);
+
+  const toggleShuffle = useCallback(() => setShuffle((value) => !value), []);
+  const toggleRepeat = useCallback(() => setRepeat((value) => !value), []);
 
   const seek = useCallback((seconds: number) => {
     const audio = audioRef.current;
@@ -180,7 +191,12 @@ export function useAudioPlayer(songs: Song[]): AudioPlayer {
     const handleEnded = () => {
       setIsPlaying(false);
       setIsBuffering(false);
-      advance(1);
+      if (repeat && audioRef.current) {
+        audioRef.current.currentTime = 0;
+        void audioRef.current.play();
+      } else {
+        advance(1);
+      }
     };
     const handleError = () => {
       setIsPlaying(false);
@@ -209,7 +225,7 @@ export function useAudioPlayer(songs: Song[]): AudioPlayer {
       audio.removeEventListener("ended", handleEnded);
       audio.removeEventListener("error", handleError);
     };
-  }, [advance]);
+  }, [advance, repeat]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -239,5 +255,9 @@ export function useAudioPlayer(songs: Song[]): AudioPlayer {
     stop,
     hasNext: currentIndex >= 0 && currentIndex < songs.length - 1,
     hasPrev: currentIndex > 0,
+    shuffle,
+    repeat,
+    toggleShuffle,
+    toggleRepeat,
   };
 }

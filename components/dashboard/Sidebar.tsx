@@ -1,11 +1,11 @@
 "use client";
 
-import { Close, Home, Library, LogOut } from "@/components/icons";
+import { Close, Heart, Home, Library, LogOut } from "@/components/icons";
 import { Logo } from "@/components/site/Logo";
 import { Spinner } from "@/components/ui/Spinner";
 import styles from "./Sidebar.module.css";
 
-export type DashboardView = "home" | "library";
+export type DashboardView = "home" | "library" | "liked";
 
 type SidebarProps = {
   open: boolean;
@@ -31,6 +31,7 @@ export function Sidebar({
   const items: { id: DashboardView; label: string; icon: typeof Home }[] = [
     { id: "home", label: "Home", icon: Home },
     { id: "library", label: "Library", icon: Library },
+    { id: "liked", label: "Liked Songs", icon: Heart },
   ];
 
   return (

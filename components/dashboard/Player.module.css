@@ -111,8 +111,34 @@
 
 .activeControl,
 .liked {
-  color: var(--text);
+  color: #e03f4f;
   background: rgba(255, 255, 255, 0.4);
+}
+
+.liked svg {
+  fill: currentColor;
+}
+
+.likePop {
+  animation: like-pop 520ms var(--ease);
+}
+
+.likeBreak {
+  animation: like-break 520ms var(--ease);
+}
+
+@keyframes like-pop {
+  0% { transform: scale(0.7); }
+  45% { transform: scale(1.3) rotate(-8deg); }
+  75% { transform: scale(0.92) rotate(4deg); }
+  100% { transform: scale(1); }
+}
+
+@keyframes like-break {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.2) rotate(8deg); }
+  60% { transform: scale(0.85) rotate(-8deg); }
+  100% { transform: scale(1); }
 }
 
 .control:disabled {

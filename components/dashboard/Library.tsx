@@ -10,6 +10,7 @@ import styles from "./Library.module.css";
 
 type LibraryProps = {
   songs: Song[];
+  title?: string;
   currentId: string | null;
   isPlaying: boolean;
   onSelect: (song: Song) => void;
@@ -25,7 +26,7 @@ function Equalizer() {
   );
 }
 
-export function Library({ songs, currentId, isPlaying, onSelect }: LibraryProps) {
+export function Library({ songs, title = "Library", currentId, isPlaying, onSelect }: LibraryProps) {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -42,7 +43,7 @@ export function Library({ songs, currentId, isPlaying, onSelect }: LibraryProps)
     <div className={styles.library}>
       <header className={styles.head}>
         <div className={styles.headText}>
-          <p className={styles.eyebrow}>Library</p>
+          <p className={styles.eyebrow}>{title}</p>
           <h1 className={styles.title}>All tracks</h1>
           <p className={styles.sub}>
             {songs.length} {trackLabel}

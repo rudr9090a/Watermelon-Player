@@ -27,7 +27,11 @@ export async function GET(
   const { songId } = await context.params;
   const range = request.headers.get("range") ?? undefined;
 
-  const upstream = await watermelonAudio(songId, range);
+  const upstream = await watermelonAudio(
+    songId,
+    range,
+    request.headers.get("cookie") ?? undefined,
+  );
 
   if (!upstream) {
     return NextResponse.json(

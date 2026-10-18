@@ -107,6 +107,39 @@ export async function logout(): Promise<void> {
   await postJson("/api/auth/logout", {});
 }
 
+export async function getLikedSongs(username: string): Promise<Set<string>> {
+  const response = await fetch(`/api/${encodeURIComponent(username)}/get_liked_songs`, {
+    credentials: "include",
+    cache: "no-store",
+  });
+  const payload = (await readJsonSafe(response)) as { liked_song_list?: unknown } | null;
+  if (!response.ok) {
+    throw new ApiError("Couldn't load your liked songs.", "server", response.status);
+  }
+  const result = payload?.liked_song_list;
+  const songs = Array.isArray(result) && Array.isArray(result[1]) ? result[1] : [];
+  return new Set(songs.filter((song): song is string => typeof song === "string"));
+}
+
+export async function setLikedSong(
+  username: string,
+  songId: string,
+  liked: boolean,
+): Promise<void> {
+  const response = await fetch(
+    `/api/${encodeURIComponent(username)}/${liked ? "like_song" : "unlike_song"}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ username, songid: songId }),
+    },
+  );
+  if (!response.ok) {
+    throw new ApiError("Couldn't update liked songs.", "server", response.status);
+  }
+}
+
 /* --------------------------------------------------------------------------
  * Library
  *

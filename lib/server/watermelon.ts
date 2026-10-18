@@ -201,10 +201,14 @@ export async function watermelonDashboard(cookies: {
 export async function watermelonAudio(
   songId: string,
   range?: string,
+  cookie?: string,
 ): Promise<Response | null> {
   const headers: Record<string, string> = {};
   if (range) {
     headers.Range = range;
+  }
+  if (cookie) {
+    headers.Cookie = cookie;
   }
 
   try {

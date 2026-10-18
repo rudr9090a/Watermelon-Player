@@ -74,10 +74,9 @@ export function EmptyLibrary() {
       <span className={styles.stateIcon}>
         <Library size={26} />
       </span>
-      <h2 className={styles.stateTitle}>Your library is empty</h2>
+      <h2 className={styles.stateTitle}>Your liked songs library is empty</h2>
       <p className={styles.stateText}>
-        Add MP3 files to the music folder on your Watermelon server and refresh the
-        page — they will appear here automatically.
+        Like some songs and they will appear here !
       </p>
     </div>
   );

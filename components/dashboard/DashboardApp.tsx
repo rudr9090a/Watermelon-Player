@@ -5,8 +5,10 @@ import { Menu } from "@/components/icons";
 import { Logo } from "@/components/site/Logo";
 import {
   ApiError,
+  getLikedSongs,
   getDashboard,
   logout,
+  setLikedSong,
   type Dashboard,
 } from "@/lib/api";
 import { useAudioPlayer } from "./useAudioPlayer";
@@ -31,8 +33,10 @@ export function DashboardApp() {
   const [navOpen, setNavOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+  const [likedSongIds, setLikedSongIds] = useState<Set<string>>(new Set());
 
   const songs = dashboard?.songs ?? [];
+  const likedSongs = songs.filter((song) => likedSongIds.has(song.id));
   const player = useAudioPlayer(songs);
 
   useEffect(() => {
@@ -42,6 +46,9 @@ export function DashboardApp() {
       .then((data) => {
         setDashboard(data);
         setStatus("ready");
+        if (data.username) {
+          return getLikedSongs(data.username).then(setLikedSongIds);
+        }
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") {
@@ -99,6 +106,31 @@ export function DashboardApp() {
     setNavOpen(false);
   }, []);
 
+  async function toggleLike() {
+    const song = player.current;
+    const username = dashboard?.username;
+    if (!song || !username) {
+      return;
+    }
+    const liked = likedSongIds.has(song.id);
+    setLikedSongIds((previous) => {
+      const next = new Set(previous);
+      if (liked) next.delete(song.id);
+      else next.add(song.id);
+      return next;
+    });
+    try {
+      await setLikedSong(username, song.id, !liked);
+    } catch {
+      setLikedSongIds((previous) => {
+        const next = new Set(previous);
+        if (liked) next.add(song.id);
+        else next.delete(song.id);
+        return next;
+      });
+    }
+  }
+
   if (status === "unauthenticated") {
     return <UnauthenticatedState message={message} />;
   }
@@ -151,9 +183,17 @@ export function DashboardApp() {
               onSelect={player.select}
               onBrowse={() => setView("library")}
             />
-          ) : (
+          ) : view === "library" ? (
             <Library
               songs={songs}
+              currentId={player.current?.id ?? null}
+              isPlaying={player.isPlaying}
+              onSelect={player.select}
+            />
+          ) : (
+            <Library
+              title="Liked Songs"
+              songs={likedSongs}
               currentId={player.current?.id ?? null}
               isPlaying={player.isPlaying}
               onSelect={player.select}
@@ -162,7 +202,11 @@ export function DashboardApp() {
         </main>
       </div>
 
-      <Player player={player} />
+      <Player
+        player={player}
+        liked={player.current ? likedSongIds.has(player.current.id) : false}
+        onToggleLike={toggleLike}
+      />
     </div>
   );
 }
