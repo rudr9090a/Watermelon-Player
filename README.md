@@ -1,21 +1,23 @@
 # Watermelon
 
-Watermelon is a self-hosted music library and web player. It gives you a
-focused interface for browsing, searching, and streaming music from a FastAPI
-server that runs on hardware you control.
+Watermelon is the Next.js web client for Storter, a self-hosted
+music server. It provides the browser interface for signing in, browsing the
+Storter library, playing audio, and managing liked songs.
 
-The frontend is built with Next.js and can be exposed through a single public
-origin. The browser only talks to same-origin `/api/*` URLs; Next.js handles
-the server-side connection to the private FastAPI service.
+Storter remains the source of truth for authentication, sessions, accounts,
+music metadata, liked songs, and audio files. Watermelon does not replace or
+duplicate that backend. It provides the web experience that connects to it.
+
+The browser uses same-origin `/api/*` URLs. The Next.js server forwards those
+requests to the private Storter FastAPI service.
 
 ## Features
 
-- Self-hosted music library with no ads or subscription service
-- Username/password authentication with HTTP-only session cookies
-- Dashboard library and search views
+- Storter account authentication with HTTP-only session cookies
+- Storter library and search views
 - Native progressive audio playback with seeking and volume control
 - Shuffle, repeat, keyboard spacebar playback, and previous/next controls
-- Persistent liked songs
+- Persistent liked songs stored by Storter
 - Responsive desktop and mobile layouts
 - Private FastAPI backend with optional ngrok access through Next.js only
 
@@ -26,14 +28,14 @@ Browser
   |
   | HTTPS / same-origin requests
   v
-Next.js + Watermelon UI
+Next.js + Watermelon web client
   |
-  | http://127.0.0.1:8000
+  | internal HTTP
   v
-FastAPI backend
+Storter FastAPI backend
   |
   v
-Local accounts, sessions, music metadata, and audio files
+Storter accounts, sessions, music metadata, liked songs, and audio files
 ```
 
 Only the Next.js server should be exposed publicly. Do not expose the FastAPI
@@ -44,7 +46,7 @@ port through ngrok.
 - Node.js 20 or newer
 - npm
 - Python 3.10 or newer
-- The companion FastAPI backend running locally
+- The Storter FastAPI backend running locally
 - Optional: [ngrok](https://ngrok.com/) for public access
 
 ## Configuration
@@ -75,14 +77,14 @@ For HTTPS production access, leave `COOKIE_SECURE` unset or set it to `true`.
 
 ## Local Development
 
-Start the FastAPI backend in one PowerShell window:
+Start Storter in one PowerShell window:
 
 ```powershell
-Set-Location <path-to-fastapi-backend>
+Set-Location <path-to-storter>
 python main.py
 ```
 
-The backend should listen on `127.0.0.1:8000`.
+Storter should listen on `127.0.0.1:8000`.
 
 Start the public-capable Next.js development server in a second window:
 
@@ -138,7 +140,7 @@ Stop each process with `Ctrl+C` in its PowerShell window.
 
 ## API Integration
 
-The frontend uses same-origin requests for the backend contract, including:
+Watermelon uses same-origin requests for the Storter API contract, including:
 
 - `POST /api/auth/login`
 - `POST /api/auth/signup`
@@ -147,13 +149,14 @@ The frontend uses same-origin requests for the backend contract, including:
 - `GET /api/music/{song_id}/audio`
 - Liked-song operations under `/api/{username}/...`
 
-Authentication cookies remain HTTP-only and are handled by the Next.js server
-bridge. The native audio element receives a relative URL and supports
-progressive playback without downloading the complete file first.
+Storter remains responsible for authentication and authorization. Authentication
+cookies are kept HTTP-only by the Watermelon server bridge. The native audio
+element receives a relative URL and supports progressive playback without
+downloading the complete file first.
 
 ## Security Notes
 
-- Keep FastAPI bound to `127.0.0.1` when using the Next.js bridge.
+- Keep Storter/FastAPI bound to `127.0.0.1` when using the Next.js bridge.
 - Do not commit `.env.local`, credentials, account databases, session files, or
   local music assets.
 - Keep authentication and authorization enforced by FastAPI; the Next.js
@@ -165,9 +168,9 @@ progressive playback without downloading the complete file first.
 
 ```text
 app/                    Next.js routes and pages
-components/             UI, landing page, auth, and dashboard components
-lib/                    API clients, cookie helpers, and server bridge
-public/                 Static assets and branding
+components/             Watermelon UI, auth, and dashboard components
+lib/                    Storter API clients, cookie helpers, and bridge
+public/                 Watermelon static assets and branding
 ```
 
 ## License
