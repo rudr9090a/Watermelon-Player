@@ -63,6 +63,13 @@ export function HomeView({
                         .filter(Boolean)
                         .join(" ")}
                     >
+                      {song.thumbnail ? (
+                        <img
+                          className={styles.thumbnail}
+                          src={`/api/get_song_thumbnail/${encodeURIComponent(song.id)}`}
+                          alt=""
+                        />
+                      ) : null}
                       <span className={styles.playBadge} aria-hidden="true">
                         {playingThis ? <Pause size={16} /> : <Play size={16} />}
                       </span>

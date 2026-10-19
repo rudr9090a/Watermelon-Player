@@ -57,6 +57,12 @@
   color: var(--text-faint);
 }
 
+.thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .nowMeta {
   min-width: 0;
 }
@@ -297,5 +303,32 @@
   .art {
     width: 40px;
     height: 40px;
+  }
+
+  .player {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-inline: 10px;
+  }
+
+  .now {
+    gap: 8px;
+  }
+
+  .nowTitle {
+    max-width: 105px;
+  }
+
+  .controls {
+    gap: 2px;
+  }
+
+  .control {
+    width: 31px;
+    height: 31px;
+  }
+
+  .playButton {
+    width: 38px;
+    height: 38px;
   }
 }

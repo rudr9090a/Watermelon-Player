@@ -16,6 +16,7 @@ import { Sidebar, type DashboardView } from "./Sidebar";
 import { HomeView } from "./HomeView";
 import { Library } from "./Library";
 import { Player } from "./Player";
+import { DownloadAlbum } from "./DownloadAlbum";
 import {
   ErrorState,
   LoadingState,
@@ -171,6 +172,7 @@ export function DashboardApp() {
 
       <div className={styles.content}>
         <main className={styles.main}>
+          {status === "ready" ? <DownloadAlbum onComplete={retry} /> : null}
           {status === "loading" ? (
             <LoadingState />
           ) : status === "error" ? (

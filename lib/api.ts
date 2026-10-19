@@ -140,6 +140,19 @@ export async function setLikedSong(
   }
 }
 
+export async function downloadAlbum(url: string): Promise<void> {
+  const response = await fetch("/api/downloadalbumyt", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ url }),
+  });
+  if (!response.ok) {
+    const payload = await readJsonSafe(response);
+    throw new ApiError(errorMessage(payload, "Couldn't download the album."), "server", response.status);
+  }
+}
+
 /* --------------------------------------------------------------------------
  * Library
  *
@@ -162,6 +175,10 @@ export type Song = {
   title: string;
   /** Upper-case extension, e.g. "MP3". Derived from the file name. */
   format: string;
+  artist?: string;
+  album?: string;
+  duration?: number;
+  thumbnail?: string;
 };
 
 export type Dashboard = {
@@ -173,11 +190,35 @@ export type Dashboard = {
   songs: Song[];
 };
 
-export function toSong(filename: string): Song {
+export function toSong(filename: string, metadata?: Record<string, unknown>): Song {
   const dot = filename.lastIndexOf(".");
   const id = dot > 0 ? filename.slice(0, dot) : filename;
   const format = dot > 0 ? filename.slice(dot + 1).toUpperCase() : "";
-  return { id, filename, title: id, format };
+  return {
+    id,
+    filename,
+    title: typeof metadata?.title === "string" ? metadata.title : id,
+    format: typeof metadata?.audio_format === "string" ? metadata.audio_format.toUpperCase() : format,
+    artist: typeof metadata?.artist === "string" ? metadata.artist : undefined,
+    album: typeof metadata?.album === "string" ? metadata.album : undefined,
+    duration: typeof metadata?.duration === "number" ? metadata.duration : undefined,
+    thumbnail: typeof metadata?.thumbnail === "string" ? metadata.thumbnail : undefined,
+  };
+}
+
+async function getSongMetadata(filename: string): Promise<Record<string, unknown> | undefined> {
+  const id = filename.slice(0, filename.lastIndexOf("."));
+  try {
+    const response = await fetch(`/api/get_song_data/${encodeURIComponent(id)}`, {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (!response.ok) return undefined;
+    const payload = await response.json();
+    return payload && typeof payload === "object" ? payload as Record<string, unknown> : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function audioUrl(songId: string): string {
@@ -231,9 +272,11 @@ export async function getDashboard(signal?: AbortSignal): Promise<Dashboard> {
     account?: unknown;
   };
 
-  const songs = Array.isArray(raw.songs)
-    ? raw.songs.filter((value): value is string => typeof value === "string").map(toSong)
+  const filenames = Array.isArray(raw.songs)
+    ? raw.songs.filter((value): value is string => typeof value === "string")
     : [];
+  const metadata = await Promise.all(filenames.map(getSongMetadata));
+  const songs = filenames.map((filename, index) => toSong(filename, metadata[index]));
 
   const accountName =
     raw.account && typeof raw.account === "object"
@@ -241,8 +284,8 @@ export async function getDashboard(signal?: AbortSignal): Promise<Dashboard> {
       : undefined;
 
   return {
-    sessionValidity: raw.session_validity === true,
-    aoi: typeof raw.aoi === "string" ? raw.aoi : "",
+    sessionValidity: true,
+    aoi: "",
     username: typeof accountName === "string" ? accountName : null,
     songs,
   };

@@ -123,7 +123,15 @@ export function Player({
 
       <div className={styles.now}>
         <span className={[styles.art, artClass].filter(Boolean).join(" ")} aria-hidden="true">
-          <Music size={18} />
+          {current?.thumbnail ? (
+            <img
+              className={styles.thumbnail}
+              src={`/api/get_song_thumbnail/${encodeURIComponent(current.id)}`}
+              alt=""
+            />
+          ) : (
+            <Music size={18} />
+          )}
         </span>
         <div className={styles.nowMeta}>
           {current ? (

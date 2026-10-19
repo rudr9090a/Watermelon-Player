@@ -94,7 +94,15 @@ export function Library({ songs, title = "Library", currentId, isPlaying, onSele
                       .filter(Boolean)
                       .join(" ")}
                     aria-hidden="true"
-                  />
+                  >
+                    {song.thumbnail ? (
+                      <img
+                        className={styles.thumbnail}
+                        src={`/api/get_song_thumbnail/${encodeURIComponent(song.id)}`}
+                        alt=""
+                      />
+                    ) : null}
+                  </span>
                   <span className={styles.main}>
                     <span className={styles.rowTitle} title={song.title}>
                       {song.title}

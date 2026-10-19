@@ -57,3 +57,17 @@
 .footer { display: flex; justify-content: space-between; align-items: center; padding: 24px clamp(24px, 5vw, 76px); border-top: 1px solid var(--industrial-border); color: var(--industrial-muted); font: .62rem var(--font-mono); letter-spacing: .12em; }
 .footer :global(.word) { color: white; }
 @media (max-width: 760px) { .heroGrid { padding-top: 80px; } .heroFooter span:nth-child(2) { display: none; } .footer { align-items: flex-start; flex-direction: column; gap: 18px; } }
+@media (max-width: 480px) {
+  .header { padding: 20px 18px; }
+  .header :global(.word) { font-size: 1rem; }
+  .menu { gap: 8px; font-size: .58rem; }
+  .menuIcon { width: 31px; height: 31px; }
+  .heroGrid { min-height: calc(100svh - 96px); padding: 32px 18px 86px; }
+  .heroCopy h1 { font-size: clamp(3rem, 15vw, 4.4rem); }
+  .intro { font-size: .92rem; }
+  .actions { align-items: stretch; flex-direction: column; }
+  .primaryAction, .secondaryAction { justify-content: space-between; width: 100%; }
+  .heroFooter { right: 18px; bottom: 18px; left: 18px; font-size: .54rem; }
+  .system, .statement { padding: 78px 18px; }
+  .statement h2 { font-size: clamp(2.8rem, 14vw, 4rem); }
+}

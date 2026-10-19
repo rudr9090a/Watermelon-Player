@@ -1,0 +1,9 @@
+.form { display: grid; gap: 8px; margin-bottom: 28px; color: var(--text-muted); font: .72rem var(--font-mono); text-transform: uppercase; letter-spacing: .08em; }
+.fields { display: flex; gap: 8px; }
+.fields input { min-width: 0; flex: 1; padding: 11px 12px; border: 1px solid var(--border); border-radius: 0; background: var(--surface-solid-1); color: var(--text); font: .85rem var(--font-sans); letter-spacing: 0; text-transform: none; }
+.fields input:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus-ring); }
+.fields button { padding: 0 16px; border: 1px solid var(--accent); border-radius: 0; background: var(--accent); color: var(--accent-contrast); font: 700 .7rem var(--font-mono); text-transform: uppercase; }
+.fields button:hover:not(:disabled) { background: var(--text); border-color: var(--text); }
+.fields button:disabled { opacity: .55; }
+.form p { color: var(--accent); text-transform: none; letter-spacing: 0; }
+@media (max-width: 560px) { .fields { flex-direction: column; } .fields button { min-height: 42px; } }

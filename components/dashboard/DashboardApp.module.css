@@ -67,3 +67,9 @@
     padding-left: var(--sidebar-w);
   }
 }
+
+@media (max-width: 420px) {
+  .main {
+    padding-inline: 12px;
+  }
+}
