@@ -3,6 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { audioUrl, type Song } from "@/lib/api";
+import {
+  isNativePlayer,
+  nativeBridge,
+  sendNativeQueue,
+  subscribeNativeQueue,
+  subscribeNativeState,
+  type NativePlaybackState,
+  type NativeTrack,
+} from "@/lib/nativePlayer";
 
 export type AudioPlayer = {
   audioRef: RefObject<HTMLAudioElement | null>;
@@ -36,6 +45,10 @@ export type AudioPlayer = {
  */
 export function useAudioPlayer(songs: Song[]): AudioPlayer {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const nativeMode = useState(() => isNativePlayer())[0];
+  const nativeQueue = useRef<Song[]>([]);
+  const nativeTracks = useRef<NativeTrack[]>([]);
+  const nativeState = useRef<NativePlaybackState | null>(null);
   const [current, setCurrent] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
@@ -47,6 +60,19 @@ export function useAudioPlayer(songs: Song[]): AudioPlayer {
   const [repeat, setRepeat] = useState(false);
 
   const playSong = useCallback((song: Song) => {
+    if (nativeMode) {
+      const index = songs.findIndex((candidate) => candidate.id === song.id);
+      const queue = index >= 0 ? songs : [song, ...songs];
+      const startIndex = index >= 0 ? index : 0;
+      nativeQueue.current = queue;
+      setError(null);
+      setCurrentTime(0);
+      setDuration(0);
+      setIsBuffering(true);
+      setCurrent(song);
+      sendNativeQueue(queue, startIndex);
+      return;
+    }
     const audio = audioRef.current;
     if (!audio) {
       return;
@@ -64,9 +90,13 @@ export function useAudioPlayer(songs: Song[]): AudioPlayer {
         // Autoplay can be blocked; the element's events drive the UI state.
       });
     }
-  }, []);
+  }, [nativeMode, songs]);
 
   const toggle = useCallback(() => {
+    if (nativeMode) {
+      if (current) nativeBridge()?.toggle();
+      return;
+    }
     const audio = audioRef.current;
     if (!audio || !current) {
       return;
@@ -79,7 +109,7 @@ export function useAudioPlayer(songs: Song[]): AudioPlayer {
     } else {
       audio.pause();
     }
-  }, [current]);
+  }, [current, nativeMode]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -118,6 +148,11 @@ export function useAudioPlayer(songs: Song[]): AudioPlayer {
       if (!current) {
         return;
       }
+      if (nativeMode) {
+        if (delta > 0) nativeBridge()?.next();
+        else nativeBridge()?.prev();
+        return;
+      }
       const index = songs.findIndex((song) => song.id === current.id);
       if (index === -1) {
         return;
@@ -129,32 +164,62 @@ export function useAudioPlayer(songs: Song[]): AudioPlayer {
         playSong(target);
       }
     },
-    [current, songs, playSong, shuffle],
+    [current, nativeMode, songs, playSong, shuffle],
   );
 
   const next = useCallback(() => advance(1), [advance]);
   const prev = useCallback(() => advance(-1), [advance]);
 
-  const toggleShuffle = useCallback(() => setShuffle((value) => !value), []);
-  const toggleRepeat = useCallback(() => setRepeat((value) => !value), []);
+  const toggleShuffle = useCallback(() => {
+    setShuffle((value) => {
+      const next = !value;
+      if (nativeMode) nativeBridge()?.setShuffle(next);
+      return next;
+    });
+  }, [nativeMode]);
+  const toggleRepeat = useCallback(() => {
+    setRepeat((value) => {
+      const next = !value;
+      if (nativeMode) nativeBridge()?.setRepeat(next);
+      return next;
+    });
+  }, [nativeMode]);
 
   const seek = useCallback((seconds: number) => {
+    if (nativeMode) {
+      nativeBridge()?.seek(Math.max(0, seconds * 1000));
+      setCurrentTime(seconds);
+      return;
+    }
     const audio = audioRef.current;
     if (!audio) {
       return;
     }
     audio.currentTime = seconds;
     setCurrentTime(seconds);
-  }, []);
+  }, [nativeMode]);
 
   const setVolume = useCallback((value: number) => {
     setVolumeState(value);
+    if (nativeMode) {
+      nativeBridge()?.setVolume(value);
+      return;
+    }
     if (audioRef.current) {
       audioRef.current.volume = value;
     }
-  }, []);
+  }, [nativeMode]);
 
   const stop = useCallback(() => {
+    if (nativeMode) {
+      nativeBridge()?.stop();
+      setCurrent(null);
+      setCurrentTime(0);
+      setDuration(0);
+      setIsPlaying(false);
+      setIsBuffering(false);
+      return;
+    }
     const audio = audioRef.current;
     if (!audio) {
       return;
@@ -164,12 +229,66 @@ export function useAudioPlayer(songs: Song[]): AudioPlayer {
     audio.load();
     setIsPlaying(false);
     setIsBuffering(false);
-  }, []);
+  }, [nativeMode]);
 
-  useEffect(() => stop, [stop]);
+  useEffect(() => {
+    if (nativeMode) return;
+    return stop;
+  }, [nativeMode, stop]);
+
+  useEffect(() => {
+    if (!nativeMode) return;
+
+    const applyState = (state: NativePlaybackState) => {
+      nativeState.current = state;
+      const song = nativeQueue.current.find((candidate) => candidate.id === state.currentId);
+      const track = nativeTracks.current.find((candidate) => candidate.id === state.currentId);
+      if (state.currentId) {
+        setCurrent(song ?? (track ? {
+          id: track.id,
+          filename: `${track.id}.mp3`,
+          title: track.title,
+          format: "MP3",
+          artist: track.artist,
+          album: track.album,
+          duration: track.durationMs ? track.durationMs / 1000 : undefined,
+          thumbnail: track.artUrl,
+        } : {
+          id: state.currentId,
+          filename: `${state.currentId}.mp3`,
+          title: state.currentId,
+          format: "MP3",
+        }));
+      } else {
+        setCurrent(null);
+      }
+      setCurrentTime(Math.max(0, state.positionMs) / 1000);
+      setDuration(Math.max(0, state.durationMs) / 1000);
+      setIsPlaying(state.status === "playing");
+      setIsBuffering(state.status === "buffering");
+      setError(state.status === "error" ? (state.error ?? "This track could not be played.") : null);
+      setShuffle(state.shuffle);
+      setRepeat(state.repeat);
+    };
+
+    const unsubscribeState = subscribeNativeState(applyState);
+    const unsubscribeQueue = subscribeNativeQueue((tracks) => {
+      nativeTracks.current = tracks;
+      if (nativeState.current) applyState(nativeState.current);
+    });
+    const bridge = nativeBridge();
+    bridge?.requestState();
+    bridge?.requestQueue();
+    bridge?.setVolume(volume);
+    return () => {
+      unsubscribeState();
+      unsubscribeQueue();
+    };
+  }, [nativeMode]);
 
   // Attach the listeners once per `advance` identity (i.e. per track change).
   useEffect(() => {
+    if (nativeMode) return;
     const audio = audioRef.current;
     if (!audio) {
       return;
@@ -225,13 +344,13 @@ export function useAudioPlayer(songs: Song[]): AudioPlayer {
       audio.removeEventListener("ended", handleEnded);
       audio.removeEventListener("error", handleError);
     };
-  }, [advance, repeat]);
+  }, [advance, nativeMode, repeat]);
 
   useEffect(() => {
-    if (audioRef.current) {
+    if (!nativeMode && audioRef.current) {
       audioRef.current.volume = volume;
     }
-  }, [volume]);
+  }, [nativeMode, volume]);
 
   const currentIndex = current
     ? songs.findIndex((song) => song.id === current.id)
@@ -253,8 +372,8 @@ export function useAudioPlayer(songs: Song[]): AudioPlayer {
     seek,
     setVolume,
     stop,
-    hasNext: currentIndex >= 0 && currentIndex < songs.length - 1,
-    hasPrev: currentIndex > 0,
+    hasNext: nativeMode ? Boolean(nativeState.current?.hasNext) : currentIndex >= 0 && currentIndex < songs.length - 1,
+    hasPrev: nativeMode ? Boolean(nativeState.current?.hasPrev) : currentIndex > 0,
     shuffle,
     repeat,
     toggleShuffle,

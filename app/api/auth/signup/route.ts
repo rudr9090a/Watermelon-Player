@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { watermelonSignup } from "@/lib/server/watermelon";
+import { watermelonSignupRequest } from "@/lib/server/watermelon";
 import { parseCredentials } from "@/lib/server/validate";
 
 export async function POST(request: NextRequest) {
@@ -22,13 +22,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const result = await watermelonSignup(credentials);
+  const result = await watermelonSignupRequest(credentials);
 
   if (!result.ok) {
     const status = result.status === 0 ? 502 : result.status;
     return NextResponse.json({ error: result.message }, { status });
   }
 
-  // Watermelon creates the account but does not open a session.
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, requiresOtp: true });
 }

@@ -99,8 +99,12 @@ export async function login(credentials: Credentials): Promise<void> {
   await postJson("/api/auth/login", credentials);
 }
 
-export async function signup(credentials: Credentials): Promise<void> {
+export async function requestSignupOtp(credentials: Credentials): Promise<void> {
   await postJson("/api/auth/signup", credentials);
+}
+
+export async function signup(credentials: Credentials, otp: string): Promise<void> {
+  await postJson("/api/auth/signup/verify", { ...credentials, otp });
 }
 
 export async function logout(): Promise<void> {
@@ -154,6 +158,111 @@ export async function downloadAlbum(url: string): Promise<void> {
 }
 
 /* --------------------------------------------------------------------------
+ * Add song (YouTube Music via Storter's yt-dlp bridge)
+ * ------------------------------------------------------------------------ */
+
+export type SongSearchResult = {
+  video_id: string;
+  title: string;
+  artist?: string;
+  album?: string;
+  duration?: number;
+  thumbnail?: string;
+  webpage_url?: string;
+};
+
+export type AddSongJob = {
+  job_id: string;
+  status: "queued" | "running" | "completed" | "failed";
+  song?: {
+    video_id: string;
+    filename: string;
+    title?: string;
+    artist?: string;
+    album?: string;
+    duration?: number;
+    thumbnail?: string;
+  } | null;
+  error?: string | null;
+};
+
+export async function searchSongs(
+  query: string,
+  limit = 8,
+  signal?: AbortSignal,
+): Promise<SongSearchResult[]> {
+  const response = await fetch(
+    `/api/search_songs?q=${encodeURIComponent(query)}&limit=${limit}`,
+    { credentials: "include", cache: "no-store", signal },
+  );
+  const payload = await readJsonSafe(response);
+  if (!response.ok) {
+    throw new ApiError(
+      errorMessage(payload, "Couldn't search for songs."),
+      response.status >= 500 ? "server" : "validation",
+      response.status,
+    );
+  }
+  const results =
+    payload && typeof payload === "object"
+      ? (payload as { results?: unknown }).results
+      : undefined;
+  return Array.isArray(results) ? (results as SongSearchResult[]) : [];
+}
+
+export async function startAddSong(target: {
+  url?: string;
+  videoId?: string;
+  query?: string;
+}): Promise<{ jobId: string; status: string }> {
+  const response = await fetch("/api/add_song", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      url: target.url,
+      video_id: target.videoId,
+      query: target.query,
+    }),
+  });
+  const payload = await readJsonSafe(response);
+  if (!response.ok) {
+    throw new ApiError(
+      errorMessage(payload, "Couldn't add that song."),
+      response.status >= 500 ? "server" : "validation",
+      response.status,
+    );
+  }
+  const record =
+    payload && typeof payload === "object"
+      ? (payload as { job_id?: unknown; status?: unknown })
+      : {};
+  if (typeof record.job_id !== "string") {
+    throw new ApiError("Unexpected response from the server.", "server", 502);
+  }
+  return {
+    jobId: record.job_id,
+    status: typeof record.status === "string" ? record.status : "queued",
+  };
+}
+
+export async function getAddSongJob(jobId: string): Promise<AddSongJob> {
+  const response = await fetch(`/api/add_song/${encodeURIComponent(jobId)}`, {
+    credentials: "include",
+    cache: "no-store",
+  });
+  const payload = await readJsonSafe(response);
+  if (!response.ok) {
+    throw new ApiError(
+      errorMessage(payload, "Couldn't check the download status."),
+      response.status >= 500 ? "server" : "validation",
+      response.status,
+    );
+  }
+  return payload as AddSongJob;
+}
+
+/* --------------------------------------------------------------------------
  * Library
  *
  * Contract verified against the FastAPI backend + `data/musicmanager.py`:
@@ -181,6 +290,88 @@ export type Song = {
   thumbnail?: string;
 };
 
+export type Playlist = {
+  id: string;
+  name: string;
+  songs: { id: string }[];
+};
+
+async function playlistRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, { ...init, credentials: "include", cache: "no-store" });
+  const payload = await readJsonSafe(response);
+  if (!response.ok) {
+    throw new ApiError(errorMessage(payload, "Playlist request failed."), "server", response.status);
+  }
+  return payload as T;
+}
+
+export async function getPlaylists(): Promise<Playlist[]> {
+  const payload = await playlistRequest<{ playlists?: unknown }>("/api/playlists");
+  return Array.isArray(payload.playlists) ? payload.playlists as Playlist[] : [];
+}
+
+export async function createPlaylist(name: string): Promise<Playlist> {
+  const payload = await playlistRequest<{ playlist: Playlist }>("/api/playlists", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  return payload.playlist;
+}
+
+export async function renamePlaylist(playlistId: string, name: string): Promise<Playlist> {
+  const payload = await playlistRequest<{ playlist: Playlist }>(`/api/playlists/${encodeURIComponent(playlistId)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  return payload.playlist;
+}
+
+export async function deletePlaylist(playlistId: string): Promise<void> {
+  await playlistRequest(`/api/playlists/${encodeURIComponent(playlistId)}`, { method: "DELETE" });
+}
+
+export async function addSongToPlaylist(playlistId: string, songId: string): Promise<Playlist> {
+  const payload = await playlistRequest<{ playlist: Playlist }>(`/api/playlists/${encodeURIComponent(playlistId)}/songs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ songid: songId }),
+  });
+  return payload.playlist;
+}
+
+export async function removeSongFromPlaylist(playlistId: string, songId: string): Promise<Playlist> {
+  const payload = await playlistRequest<{ playlist: Playlist }>(`/api/playlists/${encodeURIComponent(playlistId)}/songs/${encodeURIComponent(songId)}`, {
+    method: "DELETE",
+  });
+  return payload.playlist;
+}
+
+export type PlaylistImportStatus = {
+  import_id: string;
+  playlist_id: string;
+  status: "queued" | "running" | "completed" | "failed";
+  total: number;
+  processed: number;
+  added: number;
+  skipped: number;
+  error: string | null;
+};
+
+export async function startPlaylistImport(playlistId: string, url: string): Promise<string> {
+  const payload = await playlistRequest<{ import_id: string }>(`/api/playlists/${encodeURIComponent(playlistId)}/imports`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
+  return payload.import_id;
+}
+
+export async function getPlaylistImport(importId: string): Promise<PlaylistImportStatus> {
+  return playlistRequest<PlaylistImportStatus>(`/api/playlist-imports/${encodeURIComponent(importId)}`);
+}
+
 export type Dashboard = {
   sessionValidity: boolean;
   /** Status message from the backend (the `aoi` field is a string here). */
@@ -206,8 +397,81 @@ export function toSong(filename: string, metadata?: Record<string, unknown>): So
   };
 }
 
-async function getSongMetadata(filename: string): Promise<Record<string, unknown> | undefined> {
-  const id = filename.slice(0, filename.lastIndexOf("."));
+const songMetadataMemory = new Map<string, Record<string, unknown> | undefined>();
+const songMetadataInflight = new Map<string, Promise<Record<string, unknown> | undefined>>();
+
+const SONG_METADATA_CACHE_PREFIX = "watermelon:song-metadata:";
+
+/**
+ * Read a song's metadata from the on-device (localStorage) cache.
+ *
+ * This is intentionally synchronous so the dashboard can render cached titles,
+ * artists and thumbnails on the very first paint — before any network request.
+ * The WebView keeps localStorage across app restarts, so this survives reboots.
+ */
+export function readCachedSongMetadata(id: string): Record<string, unknown> | undefined {
+  const memo = songMetadataMemory.get(id);
+  if (memo) return memo;
+  if (typeof window === "undefined") return undefined;
+  try {
+    const cached = window.localStorage.getItem(`${SONG_METADATA_CACHE_PREFIX}${id}`);
+    if (!cached) return undefined;
+    const parsed = JSON.parse(cached) as unknown;
+    if (parsed && typeof parsed === "object") {
+      const metadata = parsed as Record<string, unknown>;
+      if (typeof metadata.detail === "string" && typeof metadata.title !== "string") {
+        // Drop stale "unfinished download" placeholders so they get retried.
+        try { window.localStorage.removeItem(`${SONG_METADATA_CACHE_PREFIX}${id}`); } catch { /* ignore */ }
+        return undefined;
+      }
+      songMetadataMemory.set(id, metadata);
+      return metadata;
+    }
+  } catch { /* Ignore unavailable or corrupt browser storage. */ }
+  return undefined;
+}
+
+/** Store freshly downloaded metadata so the new song renders immediately. */
+export function primeSongMetadata(id: string, metadata: Record<string, unknown>): void {
+  if (!id || !metadata || typeof metadata !== "object") return;
+  songMetadataMemory.set(id, metadata);
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      `${SONG_METADATA_CACHE_PREFIX}${id}`,
+      JSON.stringify(metadata),
+    );
+  } catch { /* Storage is optional. */ }
+}
+
+export async function getSongMetadata(id: string): Promise<Record<string, unknown> | undefined> {
+  const memo = songMetadataMemory.get(id);
+  if (memo) return memo;
+  const cached = readCachedSongMetadata(id);
+  if (cached) return cached;
+  const pending = songMetadataInflight.get(id);
+  if (pending) return pending;
+
+  const request = getSongMetadataOnce(id);
+  songMetadataInflight.set(id, request);
+  try {
+    const result = await request;
+    songMetadataMemory.set(id, result);
+    return result;
+  } finally {
+    songMetadataInflight.delete(id);
+  }
+}
+
+async function getSongMetadataOnce(id: string): Promise<Record<string, unknown> | undefined> {
+  const cacheKey = `${SONG_METADATA_CACHE_PREFIX}${id}`;
+  try {
+    const cached = window.localStorage.getItem(cacheKey);
+    if (cached) {
+      const parsed = JSON.parse(cached) as unknown;
+      if (parsed && typeof parsed === "object") return parsed as Record<string, unknown>;
+    }
+  } catch { /* Ignore unavailable or corrupt browser storage. */ }
   try {
     const response = await fetch(`/api/get_song_data/${encodeURIComponent(id)}`, {
       credentials: "include",
@@ -215,7 +479,17 @@ async function getSongMetadata(filename: string): Promise<Record<string, unknown
     });
     if (!response.ok) return undefined;
     const payload = await response.json();
-    return payload && typeof payload === "object" ? payload as Record<string, unknown> : undefined;
+    if (payload && typeof payload === "object") {
+      const metadata = payload as Record<string, unknown>;
+      // The backend returns `{ "detail": "unfinished downloaded song" }` for
+      // incomplete downloads; never cache that, or the song stays nameless.
+      if (typeof metadata.detail === "string" && typeof metadata.title !== "string") {
+        return undefined;
+      }
+      try { window.localStorage.setItem(cacheKey, JSON.stringify(metadata)); } catch { /* Storage is optional. */ }
+      return metadata;
+    }
+    return undefined;
   } catch {
     return undefined;
   }
@@ -275,8 +549,13 @@ export async function getDashboard(signal?: AbortSignal): Promise<Dashboard> {
   const filenames = Array.isArray(raw.songs)
     ? raw.songs.filter((value): value is string => typeof value === "string")
     : [];
-  const metadata = await Promise.all(filenames.map(getSongMetadata));
-  const songs = filenames.map((filename, index) => toSong(filename, metadata[index]));
+  // Seed every song from the on-device cache so titles/artists/thumbnails show
+  // immediately on load instead of flashing raw file ids until metadata loads.
+  const songs = filenames.map((filename) => {
+    const song = toSong(filename);
+    const cached = readCachedSongMetadata(song.id);
+    return cached ? toSong(filename, cached) : song;
+  });
 
   const accountName =
     raw.account && typeof raw.account === "object"

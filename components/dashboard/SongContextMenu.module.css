@@ -1,0 +1,5 @@
+.menu { position: fixed; z-index: 100; min-width: 210px; padding: 6px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface-solid-1); box-shadow: var(--shadow-lg); }
+.heading { padding: 8px 10px; color: var(--text-faint); font: 700 .62rem var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
+.menu button { display: block; width: 100%; padding: 9px 10px; border: 0; background: transparent; color: var(--text); text-align: left; font: .82rem var(--font-sans); }
+.menu button:hover { background: var(--accent); color: var(--accent-contrast); }
+.empty { padding: 9px 10px; color: var(--text-muted); font-size: .8rem; }

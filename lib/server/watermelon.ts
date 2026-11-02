@@ -101,13 +101,13 @@ export type SignupResult =
   | { ok: true }
   | { ok: false; status: number; message: string };
 
-export async function watermelonSignup(input: {
+async function signupRequest(input: {
   username: string;
   password: string;
 }): Promise<SignupResult> {
   let response: Response;
   try {
-    response = await fetch(`${getApiBaseUrl()}/api/auth/new_user`, {
+    response = await fetch(`${getApiBaseUrl()}/api/auth/signup/request-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
@@ -118,7 +118,7 @@ export async function watermelonSignup(input: {
     return {
       ok: false,
       status: 0,
-      message: "Could not reach the Watermelon server. Please try again.",
+      message: "Could not reach the Storter server. Please try again.",
     };
   }
 
@@ -131,11 +131,46 @@ export async function watermelonSignup(input: {
     return {
       ok: false,
       status,
-      message: extractDetail(payload, "Could not create the account."),
+      message: extractDetail(payload, "Could not start account verification."),
     };
   }
 
   return { ok: true };
+}
+
+export async function watermelonSignup(input: {
+  username: string;
+  password: string;
+  otp: string;
+}): Promise<SignupResult> {
+  let response: Response;
+  try {
+    response = await fetch(`${getApiBaseUrl()}/api/auth/signup/verify-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+      cache: "no-store",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch {
+    return { ok: false, status: 0, message: "Could not reach the Storter server. Please try again." };
+  }
+  const payload = await readJson(response);
+  if (!response.ok) {
+    return {
+      ok: false,
+      status: response.status,
+      message: extractDetail(payload, "The verification code was rejected."),
+    };
+  }
+  return { ok: true };
+}
+
+export async function watermelonSignupRequest(input: {
+  username: string;
+  password: string;
+}): Promise<SignupResult> {
+  return signupRequest(input);
 }
 
 export type DashboardResult =

@@ -39,6 +39,10 @@
   --accent-contrast: #0b0e14;
   --accent-soft: rgba(245, 166, 35, 0.18);
   --accent-glow: rgba(245, 166, 35, 0.36);
+  --yellow-sun: #ffd166;
+  --yellow-lemon: #ffe66d;
+  --yellow-honey: #f5a623;
+  --yellow-lime: #d8e66b;
 
   /* States */
   --danger: #f07b70;
@@ -95,6 +99,7 @@
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
   color-scheme: light;
 }
 
@@ -155,6 +160,18 @@ textarea {
 
 button {
   cursor: pointer;
+  transition: transform var(--transition), box-shadow var(--transition),
+    filter var(--transition);
+}
+
+button:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(245, 166, 35, 0.16);
+}
+
+button:not(:disabled):active {
+  transform: translateY(0) scale(0.97);
+  box-shadow: none;
 }
 
 button:disabled {

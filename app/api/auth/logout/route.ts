@@ -16,6 +16,6 @@ export async function POST(request: NextRequest) {
   }
 
   const response = NextResponse.json({ ok: true });
-  clearAuthCookies(response);
+  clearAuthCookies(response, request.nextUrl.protocol === "https:");
   return response;
 }

@@ -1,22 +1,34 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Menu } from "@/components/icons";
-import { Logo } from "@/components/site/Logo";
+import { Search } from "@/components/icons";
 import {
   ApiError,
   getLikedSongs,
+  getPlaylists,
+  createPlaylist,
+  addSongToPlaylist,
+  removeSongFromPlaylist,
+  renamePlaylist,
+  deletePlaylist,
+  startPlaylistImport,
+  getPlaylistImport,
   getDashboard,
+  getSongMetadata,
+  toSong,
   logout,
   setLikedSong,
   type Dashboard,
+  type Playlist,
 } from "@/lib/api";
+import { AddSongView } from "./AddSongView";
 import { useAudioPlayer } from "./useAudioPlayer";
 import { Sidebar, type DashboardView } from "./Sidebar";
 import { HomeView } from "./HomeView";
 import { Library } from "./Library";
+import { MobileNav } from "./MobileNav";
+import { PlaylistsView } from "./PlaylistsView";
 import { Player } from "./Player";
-import { DownloadAlbum } from "./DownloadAlbum";
 import {
   ErrorState,
   LoadingState,
@@ -31,14 +43,39 @@ export function DashboardApp() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [message, setMessage] = useState("");
   const [view, setView] = useState<DashboardView>("home");
-  const [navOpen, setNavOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
   const [likedSongIds, setLikedSongIds] = useState<Set<string>>(new Set());
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [libraryQuery, setLibraryQuery] = useState("");
+  const [metadataLoading, setMetadataLoading] = useState<Set<string>>(new Set());
+
+  const hydrateSong = useCallback(async (songId: string) => {
+    if (dashboard?.songs.some((song) => song.id === songId && song.title !== song.id) || metadataLoading.has(songId)) return;
+    setMetadataLoading((previous) => new Set(previous).add(songId));
+    try {
+      const metadata = await getSongMetadata(songId);
+      if (metadata) setDashboard((previous) => previous ? { ...previous, songs: previous.songs.map((song) => song.id === songId ? toSong(song.filename, metadata) : song) } : previous);
+    } finally {
+      setMetadataLoading((previous) => { const next = new Set(previous); next.delete(songId); return next; });
+    }
+  }, [dashboard, metadataLoading]);
 
   const songs = dashboard?.songs ?? [];
   const likedSongs = songs.filter((song) => likedSongIds.has(song.id));
-  const player = useAudioPlayer(songs);
+  const normalizedQuery = libraryQuery.trim().toLowerCase();
+  const searchedSongs = normalizedQuery
+    ? songs.filter((song) => [song.title, song.artist, song.album, song.id].some((value) => value?.toLowerCase().includes(normalizedQuery)))
+    : songs;
+  const selectedPlaylistId = view.startsWith("playlist:") ? view.slice(9) : null;
+  const selectedPlaylist = selectedPlaylistId
+    ? playlists.find((playlist) => playlist.id === selectedPlaylistId)
+    : null;
+  const selectedPlaylistSongs = selectedPlaylist
+    ? songs.filter((song) => selectedPlaylist.songs.some((item) => item.id === song.id))
+    : [];
+  const queue = view === "liked" ? likedSongs : selectedPlaylist ? selectedPlaylistSongs : songs;
+  const player = useAudioPlayer(queue);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -48,7 +85,10 @@ export function DashboardApp() {
         setDashboard(data);
         setStatus("ready");
         if (data.username) {
-          return getLikedSongs(data.username).then(setLikedSongIds);
+          return Promise.all([getLikedSongs(data.username), getPlaylists()]).then(([liked, loadedPlaylists]) => {
+            setLikedSongIds(liked);
+            setPlaylists(loadedPlaylists);
+          });
         }
       })
       .catch((error: unknown) => {
@@ -71,19 +111,6 @@ export function DashboardApp() {
     return () => controller.abort();
   }, [reloadToken]);
 
-  useEffect(() => {
-    if (!navOpen) {
-      return;
-    }
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setNavOpen(false);
-      }
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [navOpen]);
-
   const retry = useCallback(() => {
     setStatus("loading");
     setReloadToken((token) => token + 1);
@@ -104,8 +131,52 @@ export function DashboardApp() {
 
   const handleViewChange = useCallback((next: DashboardView) => {
     setView(next);
-    setNavOpen(false);
   }, []);
+
+  const handleSongAdded = useCallback(() => {
+    setReloadToken((token) => token + 1);
+  }, []);
+
+  async function handleCreatePlaylist(name: string) {
+    const playlist = await createPlaylist(name);
+    setPlaylists((previous) => [...previous, playlist]);
+    setView(`playlist:${playlist.id}`);
+  }
+
+  async function handleRenamePlaylist(playlistId: string, name: string) {
+    const updated = await renamePlaylist(playlistId, name);
+    setPlaylists((previous) => previous.map((playlist) => playlist.id === updated.id ? updated : playlist));
+  }
+
+  async function handleDeletePlaylist(playlistId: string) {
+    await deletePlaylist(playlistId);
+    setPlaylists((previous) => previous.filter((playlist) => playlist.id !== playlistId));
+    if (view === `playlist:${playlistId}`) setView("library");
+  }
+
+  async function handleAddToPlaylist(playlistId: string, songId: string) {
+    const updated = await addSongToPlaylist(playlistId, songId);
+    setPlaylists((previous) => previous.map((playlist) => playlist.id === updated.id ? updated : playlist));
+  }
+
+  async function handleRemoveFromPlaylist(playlistId: string, songId: string) {
+    const updated = await removeSongFromPlaylist(playlistId, songId);
+    setPlaylists((previous) => previous.map((playlist) => playlist.id === updated.id ? updated : playlist));
+  }
+
+  async function handleImportPlaylist(playlistId: string, url: string) {
+    const importId = await startPlaylistImport(playlistId, url);
+    for (;;) {
+      await new Promise((resolve) => window.setTimeout(resolve, 1500));
+      const job = await getPlaylistImport(importId);
+      if (job.status === "failed") throw new Error(job.error || "Playlist import failed.");
+      if (job.status === "completed") {
+        setStatus("loading");
+        setReloadToken((token) => token + 1);
+        return;
+      }
+    }
+  }
 
   async function toggleLike() {
     const song = player.current;
@@ -137,68 +208,103 @@ export function DashboardApp() {
   }
 
   return (
-    <div className={styles.app}>
-      <header className={styles.mobileHeader}>
-        <Logo href="/dashboard" />
-        <button
-          type="button"
-          className={styles.menuButton}
-          onClick={() => setNavOpen(true)}
-          aria-label="Open navigation"
-          aria-controls="dashboard-nav"
-          aria-expanded={navOpen}
-        >
-          <Menu size={22} />
-        </button>
-      </header>
-
-      {navOpen ? (
-        <div
-          className={styles.backdrop}
-          onClick={() => setNavOpen(false)}
-          aria-hidden="true"
-        />
-      ) : null}
-
+    <div className={styles.app} data-dashboard-root>
       <Sidebar
-        open={navOpen}
-        onClose={() => setNavOpen(false)}
         view={view}
         onViewChange={handleViewChange}
         username={dashboard?.username ?? null}
         onSignOut={handleSignOut}
         signingOut={signingOut}
+        playlists={playlists}
+        onCreatePlaylist={handleCreatePlaylist}
+        onRenamePlaylist={handleRenamePlaylist}
+        onDeletePlaylist={handleDeletePlaylist}
       />
 
       <div className={styles.content}>
         <main className={styles.main}>
-          {status === "ready" ? <DownloadAlbum onComplete={retry} /> : null}
+          {status === "ready" && view !== "add" ? (
+            <div className={styles.searchRow}>
+              <form className={styles.globalSearch} onSubmit={(event) => event.preventDefault()}>
+                <Search size={18} className={styles.globalSearchIcon} />
+                <input
+                  value={libraryQuery}
+                  onChange={(event) => setLibraryQuery(event.target.value)}
+                  placeholder="Search your entire library"
+                  aria-label="Search your entire library"
+                  type="search"
+                />
+              </form>
+            </div>
+          ) : null}
           {status === "loading" ? (
             <LoadingState />
           ) : status === "error" ? (
             <ErrorState message={message} onRetry={retry} />
           ) : view === "home" ? (
             <HomeView
-              songs={songs}
+              songs={searchedSongs}
               currentId={player.current?.id ?? null}
               isPlaying={player.isPlaying}
               onSelect={player.select}
               onBrowse={() => setView("library")}
+              playlists={playlists}
+              onAddToPlaylist={handleAddToPlaylist}
+              onSongVisible={hydrateSong}
+              likedSongs={likedSongs}
             />
           ) : view === "library" ? (
             <Library
               songs={songs}
+              playlists={playlists}
+              onAddToPlaylist={handleAddToPlaylist}
               currentId={player.current?.id ?? null}
               isPlaying={player.isPlaying}
               onSelect={player.select}
+              onSongVisible={hydrateSong}
+            />
+          ) : view === "add" ? (
+            <AddSongView onAdded={handleSongAdded} />
+          ) : view === "playlists" ? (
+            <PlaylistsView
+              playlists={playlists}
+              onOpen={(playlistId) => setView(`playlist:${playlistId}`)}
+              onCreate={handleCreatePlaylist}
+              onRename={handleRenamePlaylist}
+              onDelete={handleDeletePlaylist}
+            />
+          ) : selectedPlaylist ? (
+            <Library
+              title={selectedPlaylist.name}
+              songs={selectedPlaylistSongs}
+              playlistId={selectedPlaylist.id}
+              onRemoveFromPlaylist={handleRemoveFromPlaylist}
+              currentId={player.current?.id ?? null}
+              isPlaying={player.isPlaying}
+               onSelect={player.select}
+               onSongVisible={hydrateSong}
+               onPlayAll={() => selectedPlaylistSongs[0] && player.select(selectedPlaylistSongs[0])}
+               onImport={(url) => handleImportPlaylist(selectedPlaylist.id, url)}
+              onShuffleAll={() => {
+                const song = selectedPlaylistSongs[Math.floor(Math.random() * selectedPlaylistSongs.length)];
+                if (song) player.select(song);
+              }}
             />
           ) : (
             <Library
               title="Liked Songs"
               songs={likedSongs}
+              playlists={playlists}
+              onAddToPlaylist={handleAddToPlaylist}
+              onPlayAll={() => likedSongs[0] && player.select(likedSongs[0])}
+              onShuffleAll={() => {
+                const song = likedSongs[Math.floor(Math.random() * likedSongs.length)];
+                if (song) player.select(song);
+              }}
               currentId={player.current?.id ?? null}
               isPlaying={player.isPlaying}
               onSelect={player.select}
+              onSongVisible={hydrateSong}
             />
           )}
         </main>
@@ -209,6 +315,8 @@ export function DashboardApp() {
         liked={player.current ? likedSongIds.has(player.current.id) : false}
         onToggleLike={toggleLike}
       />
+
+      <MobileNav view={view} onViewChange={handleViewChange} />
     </div>
   );
 }

@@ -1,49 +1,8 @@
 .app {
   --sidebar-w: 248px;
   --player-h: 88px;
+  --mobile-nav-h: 58px;
   min-height: 100dvh;
-}
-
-.mobileHeader {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  height: 62px;
-  padding-inline: 18px;
-  background: #12161f;
-  border-bottom: 1px solid var(--border);
-  backdrop-filter: saturate(140%) blur(14px);
-  -webkit-backdrop-filter: saturate(140%) blur(14px);
-}
-
-.menuButton {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface-1);
-  color: var(--text);
-  transition: background var(--transition), border-color var(--transition);
-}
-
-.menuButton:hover {
-  background: var(--surface-2);
-  border-color: var(--border-strong);
-}
-
-.backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 39;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
 }
 
 .content {
@@ -57,12 +16,44 @@
   padding: clamp(22px, 4vw, 44px) clamp(16px, 4vw, 44px) 28px;
 }
 
-@media (min-width: 861px) {
-  .mobileHeader,
-  .backdrop {
-    display: none;
-  }
+.searchRow {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  margin-bottom: clamp(28px, 4vw, 42px);
+}
 
+.globalSearch {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.globalSearch input {
+  width: 100%;
+  padding: 15px 18px 15px 48px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-solid-1);
+  color: var(--text);
+  font-size: 0.95rem;
+  transition: border-color var(--transition), background var(--transition), box-shadow var(--transition);
+}
+
+.globalSearch input::placeholder { color: var(--text-faint); }
+.globalSearch input:hover { border-color: var(--border-strong); }
+.globalSearch input:focus { outline: none; border-color: var(--yellow-lemon); background: var(--surface-solid-2); box-shadow: 0 0 0 3px rgba(255, 230, 109, 0.2); }
+.globalSearchIcon { position: absolute; top: 50%; left: 17px; transform: translateY(-50%); color: var(--yellow-lemon); pointer-events: none; }
+
+@media (max-width: 860px) {
+  .content {
+    padding-bottom: calc(
+      var(--player-h) + var(--mobile-nav-h) + env(safe-area-inset-bottom, 0px) + 24px
+    );
+  }
+}
+
+@media (min-width: 861px) {
   .content {
     padding-left: var(--sidebar-w);
   }

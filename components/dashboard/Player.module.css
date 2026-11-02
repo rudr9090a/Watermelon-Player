@@ -280,6 +280,12 @@
   box-shadow: 0 0 0 4px rgba(201, 181, 156, 0.32);
 }
 
+@media (max-width: 860px) {
+  .player {
+    bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 @media (max-width: 760px) {
   .player {
     grid-template-columns: minmax(0, 1fr) auto;

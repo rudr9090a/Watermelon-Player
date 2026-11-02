@@ -1,4 +1,5 @@
 .home {
+  --section-accent: var(--yellow-lemon);
   display: flex;
   flex-direction: column;
   gap: clamp(28px, 5vw, 48px);
@@ -14,6 +15,7 @@
   font-size: clamp(2.2rem, 5vw, 4rem);
   letter-spacing: -0.06em;
   text-transform: none;
+  color: var(--section-accent);
 }
 
 .sub {
@@ -53,7 +55,7 @@
 }
 
 .browse:hover {
-  color: var(--text);
+  color: var(--section-accent);
   background: var(--surface-2);
   border-color: var(--border-strong);
 }

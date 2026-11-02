@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { AlertCircle, CheckCircle } from "@/components/icons";
-import { ApiError, signup } from "@/lib/api";
+import { ApiError, requestSignupOtp, signup } from "@/lib/api";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { PasswordField } from "@/components/ui/PasswordField";
 import { TextField } from "@/components/ui/TextField";
@@ -25,6 +25,8 @@ export function SignupForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpRequested, setOtpRequested] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -72,7 +74,14 @@ export function SignupForm() {
 
     setSubmitting(true);
     try {
-      await signup({ username: username.trim(), password });
+      const credentials = { username: username.trim(), password };
+      if (!otpRequested) {
+        await requestSignupOtp(credentials);
+        setOtpRequested(true);
+        setSubmitting(false);
+        return;
+      }
+      await signup(credentials, otp);
       // Watermelon creates the account but does not start a session, so the user
       // signs in afterwards.
       setCreated(true);
@@ -129,7 +138,7 @@ export function SignupForm() {
             ? undefined
             : `${MIN_USERNAME_LENGTH}–${MAX_USERNAME_LENGTH} characters.`
         }
-        disabled={submitting}
+        disabled={submitting || otpRequested}
         required
       />
 
@@ -147,9 +156,25 @@ export function SignupForm() {
             ? undefined
             : `At least ${MIN_PASSWORD_LENGTH} characters.`
         }
-        disabled={submitting}
+        disabled={submitting || otpRequested}
         required
       />
+
+      {otpRequested ? (
+        <TextField
+          id="signup-otp"
+          label="Verification code"
+          name="otp"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          placeholder="6-digit code from the Storter console"
+          value={otp}
+          onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
+          hint="Ask the Storter server owner for the code. It expires in 2 minutes."
+          disabled={submitting}
+          required
+        />
+      ) : null}
 
       <PasswordField
         id="signup-confirm-password"
@@ -160,12 +185,12 @@ export function SignupForm() {
         value={confirmPassword}
         onChange={(event) => setConfirmPassword(event.target.value)}
         error={errors.confirmPassword}
-        disabled={submitting}
+        disabled={submitting || otpRequested}
         required
       />
 
       <Button type="submit" size="lg" fullWidth loading={submitting}>
-        {submitting ? "Creating account…" : "Create account"}
+        {submitting ? "Verifying…" : otpRequested ? "Verify and create account" : "Send verification code"}
       </Button>
     </form>
   );

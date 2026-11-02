@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   // Next dev validates the incoming Host header. Allow ngrok to reach the
   // development server without changing the browser-facing origin.
-  allowedDevOrigins: ["*.ngrok-free.app", "*.ngrok.io"],
+  allowedDevOrigins: ["*.ngrok-free.app", "*.ngrok.io",'play.hydrogenlabs.fun'],
   turbopack: {
     rules: {
       "*.css": {

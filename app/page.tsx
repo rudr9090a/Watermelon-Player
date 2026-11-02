@@ -1,8 +1,22 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { Logo } from "@/components/site/Logo";
+import { SESSION_COOKIE, USERNAME_COOKIE } from "@/lib/auth-cookies";
+import { watermelonDashboard } from "@/lib/server/watermelon";
+
+export const instant = false;
 import styles from "./landing.module.css";
 
-export default function Home() {
+export default async function Home() {
+  const cookieStore = await cookies();
+  const session = cookieStore.get(SESSION_COOKIE)?.value;
+  const username = cookieStore.get(USERNAME_COOKIE)?.value;
+  if (session && username) {
+    const result = await watermelonDashboard({ session, username });
+    if (result.ok) redirect("/dashboard");
+  }
+
   return (
     <main className={styles.site}>
       <section className={styles.hero}>

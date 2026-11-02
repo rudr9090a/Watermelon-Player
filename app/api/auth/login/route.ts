@@ -46,7 +46,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const response = NextResponse.json({ ok: true });
-  setAuthCookies(response, result.sessionToken, result.username);
+  const isAndroidClient = request.headers.get("x-watermelon-client") === "android";
+  const response = NextResponse.json(
+    isAndroidClient
+      ? { ok: true, success: true, session: `${result.sessionToken}=${result.username}`, aoi: "Login successful" }
+      : { ok: true },
+  );
+  setAuthCookies(response, result.sessionToken, result.username, request.nextUrl.protocol === "https:");
   return response;
 }

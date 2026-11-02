@@ -26,11 +26,11 @@ function isSecure(): boolean {
   return process.env.NODE_ENV === "production";
 }
 
-function cookieOptions(maxAge: number) {
+function cookieOptions(maxAge: number, secureOverride?: boolean) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: isSecure(),
+    secure: secureOverride ?? isSecure(),
     path: "/",
     maxAge,
   };
@@ -40,28 +40,29 @@ export function setAuthCookies(
   response: NextResponse,
   sessionToken: string,
   username: string,
+  secureOverride?: boolean,
 ) {
   response.cookies.set({
     name: SESSION_COOKIE,
     value: sessionToken,
-    ...cookieOptions(SESSION_MAX_AGE_SECONDS),
+    ...cookieOptions(SESSION_MAX_AGE_SECONDS, secureOverride),
   });
   response.cookies.set({
     name: USERNAME_COOKIE,
     value: username,
-    ...cookieOptions(SESSION_MAX_AGE_SECONDS),
+    ...cookieOptions(SESSION_MAX_AGE_SECONDS, secureOverride),
   });
 }
 
-export function clearAuthCookies(response: NextResponse) {
+export function clearAuthCookies(response: NextResponse, secureOverride?: boolean) {
   response.cookies.set({
     name: SESSION_COOKIE,
     value: "",
-    ...cookieOptions(0),
+    ...cookieOptions(0, secureOverride),
   });
   response.cookies.set({
     name: USERNAME_COOKIE,
     value: "",
-    ...cookieOptions(0),
+    ...cookieOptions(0, secureOverride),
   });
 }

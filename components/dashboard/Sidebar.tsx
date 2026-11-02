@@ -1,31 +1,44 @@
 "use client";
 
-import { Close, Heart, Home, Library, LogOut } from "@/components/icons";
+import { useState } from "react";
+import { Heart, Home, Library, LogOut, Plus } from "@/components/icons";
 import { Logo } from "@/components/site/Logo";
 import { Spinner } from "@/components/ui/Spinner";
+import type { Playlist } from "@/lib/api";
 import styles from "./Sidebar.module.css";
 
-export type DashboardView = "home" | "library" | "liked";
+export type DashboardView =
+  | "home"
+  | "library"
+  | "liked"
+  | "playlists"
+  | "add"
+  | `playlist:${string}`;
 
 type SidebarProps = {
-  open: boolean;
-  onClose: () => void;
   view: DashboardView;
   onViewChange: (view: DashboardView) => void;
   username: string | null;
   onSignOut: () => void;
   signingOut: boolean;
+  playlists: Playlist[];
+  onCreatePlaylist: (name: string) => Promise<void>;
+  onRenamePlaylist: (playlistId: string, name: string) => Promise<void>;
+  onDeletePlaylist: (playlistId: string) => Promise<void>;
 };
 
 export function Sidebar({
-  open,
-  onClose,
   view,
   onViewChange,
   username,
   onSignOut,
   signingOut,
+  playlists,
+  onCreatePlaylist,
+  onRenamePlaylist,
+  onDeletePlaylist,
 }: SidebarProps) {
+  const [playlistName, setPlaylistName] = useState("");
   const initial = username ? username.charAt(0).toUpperCase() : "S";
 
   const items: { id: DashboardView; label: string; icon: typeof Home }[] = [
@@ -37,19 +50,11 @@ export function Sidebar({
   return (
     <aside
       id="dashboard-nav"
-      className={[styles.sidebar, open && styles.open].filter(Boolean).join(" ")}
+      className={styles.sidebar}
       aria-label="Dashboard navigation"
     >
       <div className={styles.top}>
         <Logo href="/dashboard" />
-        <button
-          type="button"
-          className={styles.closeButton}
-          onClick={onClose}
-          aria-label="Close navigation"
-        >
-          <Close size={20} />
-        </button>
       </div>
 
       <nav className={styles.nav}>
@@ -72,6 +77,42 @@ export function Sidebar({
           );
         })}
       </nav>
+
+      <button
+        type="button"
+        className={[styles.addSong, view === "add" && styles.addSongActive]
+          .filter(Boolean)
+          .join(" ")}
+        onClick={() => onViewChange("add")}
+        aria-current={view === "add" ? "page" : undefined}
+      >
+        <Plus size={18} />
+        <span>Add song</span>
+      </button>
+
+      <div className={styles.playlists}>
+        <p className={styles.playlistLabel}>PLAYLISTS</p>
+        {playlists.map((playlist) => (
+          <div key={playlist.id} className={styles.playlistRow}>
+            <button type="button" className={[styles.playlistItem, view === `playlist:${playlist.id}` && styles.active].filter(Boolean).join(" ")} onClick={() => onViewChange(`playlist:${playlist.id}`)}>
+              {playlist.name}
+            </button>
+            <button type="button" className={styles.playlistAction} onClick={async () => { const name = window.prompt("Rename playlist", playlist.name)?.trim(); if (name && name !== playlist.name) await onRenamePlaylist(playlist.id, name); }} aria-label={`Rename ${playlist.name}`}>R</button>
+            <button type="button" className={styles.playlistAction} onClick={async () => { if (window.confirm(`Delete "${playlist.name}"?`)) await onDeletePlaylist(playlist.id); }} aria-label={`Delete ${playlist.name}`}>×</button>
+          </div>
+        ))}
+        <form
+          className={styles.playlistCreate}
+          onSubmit={async (event) => {
+            event.preventDefault();
+            if (!playlistName.trim()) return;
+            await onCreatePlaylist(playlistName.trim());
+            setPlaylistName("");
+          }}
+        >
+          <input value={playlistName} onChange={(event) => setPlaylistName(event.target.value)} placeholder="+ New playlist" aria-label="New playlist name" />
+        </form>
+      </div>
 
       <div className={styles.account}>
         <span className={styles.avatar} aria-hidden="true">
